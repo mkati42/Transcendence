@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ game }} Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <h1>{{ game }} Dashboard</h1>
+
+    <p><strong>Status:</strong> {{ status }}</p>
+    <p><strong>Username:</strong> {{ username }}</p>
+    <p><strong>Games Played:</strong> {{ games_played }}</p>
+    <p><strong>Wins:</strong> {{ wins }}</p>
+    <p><strong>Losses:</strong> {{ losses }}</p>
+    <p><strong>Highest Score:</strong> {{ highest_score }}</p>
+    <p><strong>Average Score:</strong> {{ average_score }}</p>
+    <p><strong>Winrate:</strong> {{ winrate }}%</p>
+
+    <canvas id="eloChart" width="400" height="200"></canvas>
+
+    <script>
+        // Django'dan gelen ELO skoru geçmişini alıyoruz
+        const eloHistory = {{ elo_history|safe }};
+        console.log(eloHistory);  // Veriyi konsola yazdırıyoruz
+
+        // Chart.js ile grafik oluşturuyoruz
+        const ctx = document.getElementById('eloChart').getContext('2d');
+        const eloChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Match 1', 'Match 2', 'Match 3', 'Match 4', 'Match 5'],  // Maç sayıları
+                datasets: [{
+                    label: 'Player 1 ELO Score',
+                    data: eloHistory,  // ELO verisini kullanıyoruz
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

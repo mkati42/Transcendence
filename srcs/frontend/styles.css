@@ -1,0 +1,13 @@
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #d0d0d0;
+}
+
+ft-transcendence {
+  display: block;
+  padding: 5%;
+  width: 100vw;
+  height: 100vh;
+}

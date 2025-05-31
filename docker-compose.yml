@@ -1,0 +1,155 @@
+services:
+  backend:
+    build:
+      context: ./srcs/backend
+    container_name: django
+    entrypoint: |
+      bash -c "
+        python manage.py migrate users zero
+        python manage.py makemigrations users
+        python manage.py migrate users
+        python manage.py makemigrations social
+        python manage.py migrate social
+        python manage.py makemigrations dashboard
+        python manage.py migrate dashboard
+        python manage.py makemigrations &&
+        python manage.py makemigrations &&
+        python manage.py migrate &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_vol:/backend
+      - ./srcs/backend/static:/backend/static
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - trans_network
+    restart: always
+    
+  game:
+    build:
+      context: ./srcs/game
+    container_name: game
+    entrypoint: |
+      bash -c "
+        python manage.py migrate &&
+        python manage.py runserver 0.0.0.0:8001
+      "
+    env_file: .env
+    ports:
+      - "8001:8001"
+    volumes:
+      - game_vol:/game
+      - ./srcs/game/static:/game/static
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - trans_network
+    restart: always
+
+  nginx:
+    build:
+      context: ./srcs/nginx
+    container_name: nginx
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      #- grafana
+      - redis
+      - postgresql
+    volumes:
+      - ./srcs/nginx:/etc/nginx/conf.d
+      - ./srcs/backend/static:/usr/share/nginx/html/bstatic
+      - ./srcs/frontend:/usr/share/nginx/html
+    networks:
+      - trans_network
+    restart: always
+
+  postgresql:
+    image: postgres:14.0
+    container_name: postgres
+    environment:
+      POSTGRES_DB: mkati
+      POSTGRES_USER: mkati
+      POSTGRES_PASSWORD: mkati
+    env_file: .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - trans_network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mkati -d mkati"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
+  redis:
+    image: redis:7.4.1-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command:
+      - redis-server
+      - --appendonly yes
+      - --requirepass "${REDIS_PASSWORD}"
+      - --maxmemory 10mb
+      - --maxmemory-policy allkeys-lru
+    networks:
+      - trans_network
+    restart: always
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: grafana
+  #   env_file: .env
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   networks:
+  #     - trans_network
+  #   restart: always
+
+volumes:
+  backend_vol:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./srcs/backend/
+  game_vol:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./srcs/game/
+  pgdata:
+    driver: local
+  redis_data:
+    driver: local
+  grafana-data:
+    driver: local
+  pgadmin-data:
+    driver: local
+
+
+networks:
+  trans_network:
+    driver: bridge
